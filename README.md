@@ -1,4 +1,7 @@
 # SnfSen
+
+1.0.0
+
 A library was developed to allow the Belle2 frost point sniffers sensors readout using a Linux machine. It does not need additional system libraries, but it uses the udevadm system command. This command is in general installed by default in most common Linux Distributions, and in any case it belongs from udev package in Debian-like distributions and from systemd package in RedHat-like ones. A gcc compiler version that supports C++11 standard is needed to build the software.
 
 The software is available as an xzip-ed tar archive. Unpacking the archive a ./snfsen directory will be create. Go to that directory and type make to build the software. Two test examples called test and loop should be available after software build. test  tries to access to all sensors and to make a single data readout; loop reads and displays sensors data continuously. To run test examples one needs of course to connect the Linux computer to the sniffer crate via an USB port.
