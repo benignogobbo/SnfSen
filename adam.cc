@@ -4,7 +4,6 @@
 // | Benigno Gobbo INFN Trieste          |
 // | 20170620 V1.2                       |
 // | 20180418 V1.2.1 Fixed a typo        |
-// |                                     |
 // +-------------------------------------+
 
 #include <iostream>
