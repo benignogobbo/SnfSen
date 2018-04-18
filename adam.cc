@@ -3,6 +3,8 @@
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
 // | 20170620 V1.2                       |
+// | 20180418 V1.2.1 Fixed a typo        |
+// |                                     |
 // +-------------------------------------+
 
 #include <iostream>
@@ -110,7 +112,7 @@ void Adam::serialConnect( void ) {
 	    << snf::usb485cbsn << ") module... \033[0m" << std::endl;
   char buff[256];
   std::string prod = "\"" + snf::usb485cbpn + "\"";
-  std::string seri = "\"" + snf::usb485cbpn + "\"";
+  std::string seri = "\"" + snf::usb485cbsn + "\"";
   std::string comm1 = "udevadm info -a -n ";
   std::string comm2 = " | xargs ";
   std::string comm3 = " | grep ";
