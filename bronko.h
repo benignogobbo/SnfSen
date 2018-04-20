@@ -6,6 +6,8 @@
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
 // | 20170620 V1.1                       |
+// | 20180419 V2.0 Loop on devices moved |
+// |               into init             |
 // +-------------------------------------+
 
 #include <string>
@@ -56,21 +58,5 @@ class Bronko {
   float       _ascii2float( std::string s );
   
 };
-
-class BronkoInit {
-
- public:
-  static BronkoInit* initialize( void );
-  inline std::vector<Bronko*> getBronkos( void ) { return _bronkos; }
-
- protected:
-  BronkoInit();
-
- private:
-  static BronkoInit* _init;
-  static std::vector<Bronko*> _bronkos;
-  
-};
-
 
 #endif // Bronko_H

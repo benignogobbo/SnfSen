@@ -2,7 +2,6 @@
 // | Bronkhorst flow meter               |
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
-// | 20170620 V1.1                       |
 // +-------------------------------------+
 
 #include <iostream>
@@ -15,114 +14,10 @@
 #include <cmath>
 
 #include <fcntl.h>
-#include <dirent.h>
 #include <unistd.h>
 
 #include "bronko.h"
 #include "devdata.h"
-
-BronkoInit* BronkoInit::_init = NULL;
-std::vector<Bronko*> BronkoInit::_bronkos = { NULL, NULL, NULL, NULL };
-
-// <+><+><+><+><+><+> Single Object Instance;
-BronkoInit* BronkoInit::initialize( void ) {
-  if( _init == 0 ) {
-    _init = new BronkoInit;
-  }
-  return _init;
-}
-
-// <+><+><+><+><+><+> Constructor
-BronkoInit::BronkoInit( void ) {
-
-  std::cout << "\033[4mLooking for " << snf::usb232x4pn << " (s/n "
-	    << snf::usb232x4sn << ") module...\033[0m" << std::endl;
-  char buff[256];
-  std::string prod = "\"" + snf::usb232x4pn + "\"";
-  std::string seri = "\"" + snf::usb232x4pn + "\"";
-  std::string comm1 = "udevadm info -a -n ";
-  std::string comm2 = " | xargs ";
-  std::string comm3 = " | grep ";
-
-  // Look for device:
-  std::vector<std::string> files;
-  DIR *dp = opendir( "/dev" );
-  struct dirent *dirp;
-  while( (dirp = readdir(dp))  != NULL ) {
-    files.push_back( std::string( dirp->d_name ) );
-  }
-  std::string s = "ttyUSB";
-  std::vector<std::string> devices;
-
-  for( unsigned int i=0; i<files.size(); i++ ) {
-    if( files[i].substr(0,6) == s ) {
-      devices.push_back( "/dev/" + files[i] );
-    }
-  }
-
-  std::vector<std::string> foundDev;
-  for( unsigned int i=0; i<devices.size(); i++ ) {
-    bool found = false;
-    std::string command = comm1 + devices[i] + comm2 + comm3 + prod + comm3 + seri;
-    FILE* f = popen( command.c_str(), "r" );
-    if( f ) {
-      while( !feof( f ) ) {
-        if( fgets( buff, 256, f ) != NULL && !found ) {
-	  found = true;
-          foundDev.push_back( devices[i] );
-        }
-      }
-      pclose( f );
-    }
-  }
-  
-  if( foundDev.size() != 4 ) {
-    std::cout << "\033[31m Found too few or many US-RS232 devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
-    exit(1);
-  }
-
-  for( int i=0; i<4; i++ ) {
-    bool alive = false;
-    Bronko* aBronkhorst = new Bronko( foundDev[i] );
-    try {
-      alive = aBronkhorst->serialConnect();      
-    } catch( std::string error ) {
-      std::cout << "\033[31mError connecting to device " << foundDev[i] << ": "
-		<< error << "\033[0m"  << std::endl;
-      aBronkhorst->serialDisconnect();
-      exit(1);
-    }
-    if( alive ) {
-      std::string sn = aBronkhorst->getSerialNumber();
-      std::unordered_map<std::string,int>::const_iterator gotIt = snf::bro.find( sn ); 
-      if( gotIt != snf::bro.end() ) {
-	int j = gotIt->second;
-	if( snf::busebro.test( j ) ) {
-	  _bronkos[ j ] = aBronkhorst;
-	  snf::bgotbro.set( j, 1 );		  
-	}
-      }
-      else {
-	throw( "Bronkhorst with s/n "+sn+" not in list" );
-	return;
-      }
-    }
-  }
-  for( std::unordered_map<std::string, int>::const_iterator it=snf::bro.begin(); it!=snf::bro.end(); ++it ) {
-    int j = it->second;
-    if( snf::bgotbro[j] ) {
-      std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
-		<< ", s/n: " << _bronkos[j]->getSerialNumber() << ", selected: "
-		<< snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
-    }
-    else {
-      std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
-		<< ", s/n: ----------" << ", selected: "
-		<< snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
-    }
-  }
-  return; 
-}
 
 // <><><><><><> I needed this just for debugging...
 void Bronko::_dumpString( std::string s ) {

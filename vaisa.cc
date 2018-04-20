@@ -2,7 +2,6 @@
 // | Vaisala DMT143 Dewpoint Transmitter |
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
-// | 20170620 V1.1                       |
 // +-------------------------------------+
 
 #include <iostream>
@@ -14,117 +13,10 @@
 #include <cmath>
 
 #include <fcntl.h>
-#include <dirent.h>
 #include <unistd.h>
 
 #include "vaisa.h"
 #include "devdata.h"
-
-VaisaInit* VaisaInit::_init = NULL;
-std::vector<Vaisa*> VaisaInit::_vaisas = { NULL, NULL, NULL, NULL };
-
-// <+><+><+><+><+><+> Single Object Instance;
-VaisaInit* VaisaInit::initialize( void ) {
-  if( _init == 0 ) {
-    _init = new VaisaInit;
-  }
-  return _init;
-}
-
-// <+><+><+><+><+><+> Constructor
-VaisaInit::VaisaInit( void ) {
-
-  std::cout << "\033[4mLooking for " << snf::usb485x4pn << " (s/n "
-	    << snf::usb485x4sn << ") module...\033[0m" << std::endl;
-  char buff[256];
-  std::string prod = "\"" + snf::usb485x4pn + "\"";
-  std::string seri = "\"" + snf::usb485x4pn + "\"";
-  std::string comm1 = "udevadm info -a -n ";
-  std::string comm2 = " | xargs ";
-  std::string comm3 = " | grep ";
-
-  // Look for device:
-  std::vector<std::string> files;
-  DIR *dp = opendir( "/dev" );
-  struct dirent *dirp;
-  while( (dirp = readdir(dp))  != NULL ) {
-    files.push_back( std::string( dirp->d_name ) );
-  }
-  std::string s = "ttyUSB";
-  std::vector<std::string> devices;
-
-  for( unsigned int i=0; i<files.size(); i++ ) {
-    if( files[i].substr(0,6) == s ) {
-      devices.push_back( "/dev/" + files[i] );
-    }
-  }
-
-  std::vector<std::string> foundDev;
-  for( unsigned int i=0; i<devices.size(); i++ ) {
-    bool found = false;
-    std::string command = comm1 + devices[i] + comm2 + comm3 + prod + comm3 + seri;
-    FILE* f = popen( command.c_str(), "r" );
-    if( f ) {
-      while( !feof( f ) ) {
-        if( fgets( buff, 256, f ) != NULL && !found ) {
-	  found = true;
-          foundDev.push_back( devices[i] );
-        }
-      }
-      pclose( f );
-    }
-  }
-
-  
-  if( foundDev.size() != 4 ) {
-    std::cout << "\033[31m Found too few or many US-RS485 devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
-    exit(1);
-  }
-
-  for( int i=0; i<4; i++ ) {
-    bool alive = false;
-    Vaisa* aVaisala = new Vaisa( foundDev[i] );
-    try {
-      alive = aVaisala->serialConnect();      
-    } catch( std::string error ) {
-      std::cout << "\033[31mError connecting to device " << foundDev[i] << ": "
-		<< error << "\033[0m"  << std::endl;
-      aVaisala->serialDisconnect();
-      exit(1);
-    }
-    if( alive ) {
-      std::string sn = aVaisala->getSerialNumber();
-      std::unordered_map<std::string,int>::const_iterator gotIt = snf::vai.find( sn ); 
-      if( gotIt != snf::vai.end() ) {
-	int j = gotIt->second;
-	if( snf::busevai.test( j ) ) {
-	  _vaisas[ j ] = aVaisala;
-	  snf::bgotvai.set( j, 1 );
-	}
-      }
-      else {
-	throw( "Vaisala with s/n "+sn+" not in list" );
-	return;
-      }
-    }
-  }
-  for( std::unordered_map<std::string, int>::const_iterator it=snf::vai.begin(); it!=snf::vai.end(); ++it ) {
-    int j = it->second;
-    if( snf::bgotvai[j] ) {
-      std::cout << "\033[0mVaisala DM143, id: " << j << ", addr.: " << _vaisas[j]->getAddr()
-		<< ", s/n: " << _vaisas[j]->getSerialNumber() << ", selected: "
-		<< snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
-    }
-    else {
-      std::cout << "\033[0mVaisala DM143, id: " << j << ", addr.: -" 
-		<< ", s/n: --------" << ", selected: "
-		<< snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
-    }
-  }
-  
-  return;
-  
-}
 
 // <><><><><><> I needed this just for debugging...
 void Vaisa::_dumpString( std::string s ) {

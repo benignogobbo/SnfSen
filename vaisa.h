@@ -6,6 +6,8 @@
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
 // | 20170620 V1.1                       |
+// | 20180419 V2.0 Loop on devices moved |
+// |               into init             |
 // +-------------------------------------+
 
 #include <string>
@@ -51,22 +53,6 @@ class Vaisa {
   int _getMyAddr( void );
   std::string _getMySN( void );
   void _dumpString( std::string s );
-};
-
-
-class VaisaInit {
-
- public:
-  static VaisaInit* initialize( void );
-  inline std::vector<Vaisa*> getVaisas( void ) { return _vaisas; }
-
- protected:
-  VaisaInit();
-
- private:
-  static VaisaInit* _init;
-  static std::vector<Vaisa*> _vaisas;
-  
 };
 
 #endif // Vaisa_H

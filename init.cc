@@ -1,17 +1,19 @@
-// +-------------------------------------+
-// | Initialization                      |
-// |                                     |
-// | Benigno Gobbo INFN Trieste          |
-// | 20170619 V1.0                       |
-// | 20170727 V1.1 Use JSON              |
-// | 20170915 V1.1.1 Fixes               |
-// +-------------------------------------+
+// +--------------------------------------+
+// | Initialization                       |
+// | Benigno Gobbo INFN Trieste           |
+// +--------------------------------------+
 
 #include <iostream>
 #include <string>
+
+#include <fcntl.h>
+#include <dirent.h>
+#include <unistd.h>
+
 // This is from here: https://github.com/nlohmann/json
 #include "json.hpp"
 // git cloned on 2017/07/27
+
 #include "init.h"
 
 using json = nlohmann::json;
@@ -21,7 +23,7 @@ std::vector<Bronko*> Init::_bronkos = { NULL, NULL, NULL, NULL };
 std::vector<Vaisa*>  Init::_vaisas  = { NULL, NULL, NULL, NULL };
 Adam*                Init::_adam    = NULL;
 
-// These meed to be initialized...
+// These need to be initialized...
 std::bitset<4> snf::bgotvai( std::string( "0000" ) );
 std::bitset<4> snf::bgotbro( std::string( "0000" ) );
 std::bitset<8> snf::bgotgem( std::string( "00000000" ) );
@@ -51,6 +53,16 @@ Init* Init::initialize( void ) {
 Init::Init( void ) {
 
   // First of all set thinks from JSON file...
+  readJSON();
+
+  std::cout << "\033[7mSearching for devices connected to USB ports. This may take a while...\033[0m"  << std::endl;
+  searchDevices();  
+
+}
+
+// <+><+><+><+><+><+> readJSON
+void Init::readJSON( void ) {
+
   std::ifstream f;
   f.open( snf::jsonFile );
   if( f.fail() ) {
@@ -74,29 +86,231 @@ Init::Init( void ) {
   snf::busegem = std::bitset<8>( j_devdata.at("devdata").at("adam4019").at("busegem").get<std::string>() );
   snf::usb485cbpn = j_devdata.at("devdata").at("adam4019").at("usb485cbpn").get<std::string>();
   snf::usb485cbsn = j_devdata.at("devdata").at("adam4019").at("usb485cbsn").get<std::string>();
-  // end of json stuff...
+
+  return;
+}
+
+// <+><+><+><+><+><+> searchDevices
+void Init::searchDevices( void ) {
+
+  // Get the name of all devices in /dev
+  std::vector<std::string> files;
+  DIR *dp = opendir( "/dev" );
+  struct dirent *dirp;
+  while( (dirp = readdir(dp))  != NULL ) {
+    files.push_back( std::string( dirp->d_name ) );
+  }
+  std::string s = "ttyUSB";
+  std::vector<std::string> devices;
+  for( unsigned int i=0; i<files.size(); i++ ) {
+    if( files[i].substr(0,6) == s ) {
+      devices.push_back( "/dev/" + files[i] );
+    }
+  }
+
+  std::cout << "\033[4mLooking for:" << std::endl
+	    << snf::usb485x4pn << " (s/n " << snf::usb485x4sn << ") module..." << std::endl
+    	    << snf::usb232x4pn << " (s/n " << snf::usb232x4sn << ") module..." << std::endl
+	    << snf::usb485cbpn << " (s/n " << snf::usb485cbsn << ") module...\033[0m" << std::endl;
+  char buff[256];
+
+  std::vector<std::string> vFoundDev, bFoundDev, aFoundDev;
+  for( unsigned int i=0; i<devices.size(); i++ ) {
+    bool vFound = false, bFound = false, aFound = false;
+    std::string vcomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb485x4pn + "/ && /" + snf::usb485x4sn + "/'";
+    FILE* f = popen( vcomm.c_str(), "r" );
+    if( f ) {
+      while( !feof( f ) ) {
+        if( fgets( buff, 256, f ) != NULL && !vFound ) {
+	  vFound = true;
+          vFoundDev.push_back( devices[i] );
+        }
+      }
+      pclose( f );
+    }
+    std::string bcomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb232x4pn + "/ && /" + snf::usb232x4sn + "/'";
+    f = popen( bcomm.c_str(), "r" );
+    if( f ) {
+      while( !feof( f ) ) {
+        if( fgets( buff, 256, f ) != NULL && !bFound ) {
+	  bFound = true;
+          bFoundDev.push_back( devices[i] );
+        }
+      }
+      pclose( f );
+    }
+    std::string acomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb485cbpn + "/ && /" + snf::usb485cbsn + "/'";
+    f = popen( acomm.c_str(), "r" );
+    if( f ) {
+      while( !feof( f ) ) {
+        if( fgets( buff, 256, f ) != NULL && !aFound ) {
+	  aFound = true;
+          aFoundDev.push_back( devices[i] );
+        }
+      }
+      pclose( f );
+    }
+  }
   
-  std::cout << "\033[7mSearching for devices connected to USB ports. This may take a while...\033[0m"  << std::endl;  
+  if( vFoundDev.size() != 4 ) {
+    std::cout << "\033[31m Found too few or many 'USB-COM485 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
+    exit(1);
+  }
+  if( bFoundDev.size() != 4 ) {
+    std::cout << "\033[31m Found too few or many 'USB-COM232 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
+    exit(1);
+  }
+  if( aFoundDev.size() != 1 ) {
+    std::cout << "\033[31m Found too few or many 'USB-RS485 Cable' devices. It must be exactly ONE. Exit...\033[0m" << std::endl;
+    exit(1);
+  }
+
+  for( int i=0; i<4; i++ ) {
+    bool alive = false;
+    Vaisa* aVaisala = new Vaisa( vFoundDev[i] );
+    try {
+      alive = aVaisala->serialConnect();      
+    } catch( std::string error ) {
+      std::cout << "\033[31mError connecting to device " << vFoundDev[i] << ": "
+		<< error << "\033[0m"  << std::endl;
+      aVaisala->serialDisconnect();
+      exit(1);
+    }
+    if( alive ) {
+      std::string sn = aVaisala->getSerialNumber();
+      std::unordered_map<std::string,int>::const_iterator gotIt = snf::vai.find( sn ); 
+      if( gotIt != snf::vai.end() ) {
+	int j = gotIt->second;
+	if( snf::busevai.test( j ) ) {
+	  _vaisas[ j ] = aVaisala;
+	  snf::bgotvai.set( j, 1 );
+	}
+      }
+      else {
+	throw( "Vaisala with s/n "+sn+" not in list" );
+	return;
+      }
+    }
+  }
+  for( std::unordered_map<std::string, int>::const_iterator it=snf::vai.begin(); it!=snf::vai.end(); ++it ) {
+    int j = it->second;
+    if( snf::bgotvai[j] ) {
+      std::cout << "\033[0mVaisala DM143, id: " << j << ", addr.: " << _vaisas[j]->getAddr()
+		<< ", s/n: " << _vaisas[j]->getSerialNumber() << ", selected: "
+		<< snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
+    }
+    else {
+      std::cout << "\033[0mVaisala DM143, id: " << j << ", addr.: -" 
+		<< ", s/n: --------" << ", selected: "
+		<< snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
+    }
+  }
+
+  for( int i=0; i<4; i++ ) {
+    bool alive = false;
+    Bronko* aBronkhorst = new Bronko( bFoundDev[i] );
+    try {
+      alive = aBronkhorst->serialConnect();      
+    } catch( std::string error ) {
+      std::cout << "\033[31mError connecting to device " << bFoundDev[i] << ": "
+		<< error << "\033[0m"  << std::endl;
+      aBronkhorst->serialDisconnect();
+      exit(1);
+    }
+    if( alive ) {
+      std::string sn = aBronkhorst->getSerialNumber();
+      std::unordered_map<std::string,int>::const_iterator gotIt = snf::bro.find( sn ); 
+      if( gotIt != snf::bro.end() ) {
+	int j = gotIt->second;
+	if( snf::busebro.test( j ) ) {
+	  _bronkos[ j ] = aBronkhorst;
+	  snf::bgotbro.set( j, 1 );		  
+	}
+      }
+      else {
+	throw( "Bronkhorst with s/n "+sn+" not in list" );
+	return;
+      }
+    }
+  }
+  for( std::unordered_map<std::string, int>::const_iterator it=snf::bro.begin(); it!=snf::bro.end(); ++it ) {
+    int j = it->second;
+    if( snf::bgotbro[j] ) {
+      std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
+		<< ", s/n: " << _bronkos[j]->getSerialNumber() << ", selected: "
+		<< snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
+    }
+    else {
+      std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
+		<< ", s/n: ----------" << ", selected: "
+		<< snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
+    }
+  }
+
+  bool alive = false;
+  Adam* anAdam = new Adam( aFoundDev[0] );
   try {
-    VaisaInit* vinit = VaisaInit::initialize(); 
-    _vaisas = vinit->getVaisas();
+    alive = anAdam->serialConnect();      
   } catch( std::string error ) {
-    throw( "\033[31mError during VAISALA initialisation: "+error+"\033[0m" );
+    std::cout << "\033[31mError connecting to device " << aFoundDev[0] << ": "
+	      << error << "\033[0m"  << std::endl;
+    anAdam->serialDisconnect();
+    exit(1);
+  }
+  _adam = anAdam;
+ 
+  return;
+  
+}
+
+// <+><+><+><+><+><+> cleanDevices
+void Init::cleanDevices( void ) {
+
+  try {
+    for( int i=0; i<4; i++ ) {
+      _vaisas[i]->serialDisconnect();
+      delete( _vaisas[i] );
+      _vaisas[i] = NULL;
+    }
+  }  catch( std::string error ) {
+    std::cout << "\033[31mError disconnecting and deleting a Vaisa object: "
+	      << error << "\033[0m"  << std::endl;
+    exit(1);
   }
 
   try {
-    BronkoInit* binit = BronkoInit::initialize(); 
-    _bronkos = binit->getBronkos();
-  } catch( std::string error ) {
-    throw( "\033[31mError during BRONKHORST initialisation: "+error+"\033[0m" );
+    for( int i=0; i<4; i++ ) {
+      _bronkos[i]->serialDisconnect();
+      delete( _bronkos[i] );
+      _bronkos[i] = NULL;
+    }
+  }  catch( std::string error ) {
+    std::cout << "\033[31mError disconnecting and deleting a Bronko object: "
+	      << error << "\033[0m"  << std::endl;
+    exit(1);
   }
 
   try {
-    _adam = Adam::initialize();
-    _adam->serialConnect();
-  } catch( std::string error ) {
-    throw( "\033[31mError during ADAM initialisation: "+error+"\033[0m" );
+    _adam->serialDisconnect();
+    delete( _adam );
+    _adam = NULL;
+  }  catch( std::string error ) {
+    std::cout << "\033[31mError disconnecting and deleting the Adam object: "
+	      << error << "\033[0m"  << std::endl;
+    exit(1);
   }
-  std::cout << "\033[7mEnd of USB ports scan.\033[0m"  << std::endl;  
+  
+}
+
+void Init::reconnectDevices( void ) {
+  try {
+    cleanDevices();
+    searchDevices();
+  }  catch( std::string error ) {
+    std::cout << "\033[31mError disconnecting and reconnecting the devices: "
+	      << error << "\033[0m"  << std::endl;
+    exit(1);
+  }
+
 
 }

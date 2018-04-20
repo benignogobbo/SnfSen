@@ -6,6 +6,8 @@
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
 // | 20170620 V1.2                       |
+// | 20180419 V2.0 Loop on devices moved |
+// |               into init             |
 // +-------------------------------------+
 
 #include <string>
@@ -16,21 +18,17 @@ class Adam {
 
  public:
 
-  static Adam* initialize( void );
-
-  void serialConnect( void );
+  Adam( std::string device );
+  bool serialConnect( void );
   void serialDisconnect( void );
 
   // Those are functions allowing some chats with the adam...
   inline std::string getAddress( void ) { return( _myAddr ); }
   double getMeasurement ( int channel );
-
- protected:
-  Adam( void );
   
  private:
 
-  static Adam*   _init;
+  std::string    _device;
   std::string    _myAddr;
   int            _fd;
   double         _readTimeout;

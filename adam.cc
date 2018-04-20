@@ -2,7 +2,6 @@
 // | ADAM-4019+                          |
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
-// | 20170620 V1.2                       |
 // +-------------------------------------+
 
 #include <iostream>
@@ -23,18 +22,8 @@
 #include "devdata.h"
 #include "adam.h"
 
-Adam* Adam::_init = 0;
-
-// <><><><><><> Single Object Instance;
-Adam* Adam::initialize( void ) {
-  if( _init == 0 ) {
-    _init = new Adam;
-  }
-  return _init;
-}
-
 // <><><><><><> Default Constructor
-Adam::Adam( void ) : _fd(0) {
+Adam::Adam( std::string device ) : _device(device), _fd(0) {
   _resetReadTimeout();
 }
 
@@ -104,59 +93,12 @@ std::string Adam::_serialFastRead() {
 }
 
 // <><><><><><> Connect to Serial
-void Adam::serialConnect( void ) {
+bool Adam::serialConnect( void ) {
 
-  std::cout << "\033[4mLooking for " << snf::usb485cbpn << " (s/n "
-	    << snf::usb485cbsn << ") module... \033[0m" << std::endl;
-  char buff[256];
-  std::string prod = "\"" + snf::usb485cbpn + "\"";
-  std::string seri = "\"" + snf::usb485cbpn + "\"";
-  std::string comm1 = "udevadm info -a -n ";
-  std::string comm2 = " | xargs ";
-  std::string comm3 = " | grep ";
-
-  // Look for device:
-  std::vector<std::string> files;
-  DIR *dp = opendir( "/dev" );
-  struct dirent *dirp;
-  while( (dirp = readdir(dp))  != NULL ) {
-    files.push_back( std::string( dirp->d_name ) );
-  }
-  std::string s = "ttyUSB";
-  std::vector<std::string> devices;
-
-  for( unsigned int i=0; i<files.size(); i++ ) {
-    if( files[i].substr(0,6) == s ) {
-      devices.push_back( "/dev/" + files[i] );
-    }
-  }
-
-  std::vector<std::string> foundDev;
-  for( unsigned int i=0; i<devices.size(); i++ ) {
-    bool found = false;
-    std::string command = comm1 + devices[i] + comm2 + comm3 + prod + comm3 + seri;
-    FILE* f = popen( command.c_str(), "r" );
-    if( f ) {
-      while( !feof( f ) ) {
-        if( fgets( buff, 256, f ) != NULL && !found ) {
-	  found = true;
-          foundDev.push_back( devices[i] );
-        }
-      }
-      pclose( f );
-    }
-  }
-  
-  if( foundDev.size() != 1 ) {
-    std::cout << "\033[31m Found too few or many US-RS485 devices. I need just one. Exit...\033[0m" << std::endl;
-    exit(1);
-  }
-  
-
-  _fd = open( foundDev[0].c_str(), O_RDWR | O_NOCTTY );
+  _fd = open( _device.c_str(), O_RDWR | O_NOCTTY );
   if( _fd < 0 ) {
     throw( std::string( strerror( errno ) ) );
-    return;
+    return false;
   }  
 
   tcgetattr( _fd, &_oldtio );
@@ -186,7 +128,7 @@ void Adam::serialConnect( void ) {
   }  
   if( !found ) {
     throw( "No ADAM-4019+ devices found..." );
-    return;
+    return false;
   }
 
   std::cout << "\033[0mConnected to an \033[0mADAM-4019+\033[0m device, address " << _myAddr << "." << std::endl;
@@ -206,7 +148,7 @@ void Adam::serialConnect( void ) {
 		<< ", connected: " << snf::yesno[snf::bgotgem.test(i)] << "." << std::endl;
   }
   
-  return;
+  return true;
 
 }
 
