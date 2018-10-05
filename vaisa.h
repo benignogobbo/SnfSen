@@ -53,6 +53,7 @@ class Vaisa {
   int _getMyAddr( void );
   std::string _getMySN( void );
   void _dumpString( std::string s );
+  bool _isFloat( std::string s );
 };
 
 #endif // Vaisa_H

@@ -18,6 +18,15 @@
 #include "vaisa.h"
 #include "devdata.h"
 
+// <><><><><><> This to check if a string is a real number...
+bool Vaisa::_isFloat( std::string s ) {
+    std::istringstream ss( s );
+    float f;
+    ss >> std::noskipws >> f;
+    return ss.eof() && !ss.fail(); 
+}
+
+
 // <><><><><><> I needed this just for debugging...
 void Vaisa::_dumpString( std::string s ) {
   for( int i=0; i<s.size(); i++ ) {
@@ -156,7 +165,14 @@ std::string Vaisa::_getValue( std::string value, std::string precision ) {
   }
   size_t first = data.find_first_not_of(' ');
   size_t last = data.find_last_not_of(' ');
-  return(data.substr(first, (last-first+1)));
+  data = data.substr(first, (last-first+1));
+  if( _isFloat( data ) ) {
+    return(data);
+  }
+  else {
+    throw( std::string( "Error, what reas is not a number." ) );
+    return(std::string(""));
+  } 
 
 }
 
