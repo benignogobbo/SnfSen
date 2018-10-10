@@ -149,9 +149,20 @@ std::string Vaisa::_getValue( std::string value, std::string precision ) {
     if( status.substr(0,2) != "OK" ) {
       throw( std::string( "Error during 'form' command execution." ) );
       return(std::string(""));
-    } 
+    }
+    usleep( 100000 ); // wait a short while...
     command = "send"; // send<cr>
-    data = sendCommand( command );
+    bool gotit = false;
+    int count = 0;
+    do { // 20181009 BenG if no data try up to three times... 
+      data = sendCommand( command );
+      if( data.size() > 0 ) gotit = true;
+      count++;
+    } while( gotit == false && count<4 );
+    if( !gotit ) {
+      throw( std::string( "Error during datum readout." ) );
+      return(std::string(""));
+    }     
     _scaleReadTimeout( 2 );
     command = "form /";  // form /<cr>
     status = sendCommand( command );
