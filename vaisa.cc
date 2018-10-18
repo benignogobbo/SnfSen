@@ -314,12 +314,14 @@ template <typename T> std::string Vaisa::sendCommand( std::string command, T arg
     throw( error );
     return(std::string(""));
   }
-  
-  if( command == "reset" ) sleep( 5 ); // reset requires 3-4s
+
+  if( command == "reset" ) sleep( 4 ); // reset requires 3-4s
+  else if( command == "frestore" ) sleep( 1 );
   else usleep( 100000 );
 
   std::string s = _serialRead();
   s = s.substr( ss.str().size() );
+
   return(s);
 }
 
@@ -356,7 +358,7 @@ bool Vaisa::factoryReset( void ) {
     throw( error );
     return( false );
   }
-  if( s != "factory setting restored" ) {
+  if( s.substr( 0, 7 ) != "Factory" ) {
     throw( "Error: Factory Restore command failed" );
     return( false );
   }
