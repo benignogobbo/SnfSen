@@ -8,6 +8,7 @@
 // | 20170620 V1.1                       |
 // | 20180419 V2.0 Loop on devices moved |
 // |               into init             |
+// | 20181018 V2.1 Reset function
 // +-------------------------------------+
 
 #include <string>
@@ -33,6 +34,7 @@ class Vaisa {
   float getTdf( int ndec = 4 );
   float getTdfAtm( int ndec = 4 );
   int   getH2O( void );
+  bool  factoryReset( void );
   
  private:
 

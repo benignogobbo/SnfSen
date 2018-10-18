@@ -305,7 +305,7 @@ template <typename T> std::string Vaisa::sendCommand( std::string command, T arg
   }
   
   if( command == "?" ) _scaleReadTimeout( 4 );
-  
+
   std::stringstream ss; ss << command << " " << argValue << "\015";
 
   try {
@@ -315,6 +315,9 @@ template <typename T> std::string Vaisa::sendCommand( std::string command, T arg
     return(std::string(""));
   }
   
+  if( command == "reset" ) sleep( 5 ); // reset requires 3-4s
+  else usleep( 100000 );
+
   std::string s = _serialRead();
   s = s.substr( ss.str().size() );
   return(s);
@@ -329,4 +332,40 @@ std::string Vaisa::sendCommand( std::string command ) {
     throw( error );
   }
   return(s);
+}
+
+// <><><><><><> reset + frestore + addr <n>
+bool Vaisa::factoryReset( void ) {
+  std:: string s = "";
+  int myAddr = _myAddr; 
+  // Try a reset...
+  try {
+    s = sendCommand( "reset" ); // will take about 5s
+  } catch( std::string error ) {
+    throw( error );
+    return( false );
+  }
+  if( s.substr( 0,6 ) != "DMT143" ) {
+    throw( "Error: Reset command failed" );
+    return( false );
+  }
+  // Try a factory restore...
+  try {
+    s = sendCommand( "frestore" );
+  } catch( std::string error ) {
+    throw( error );
+    return( false );
+  }
+  if( s != "factory setting restored" ) {
+    throw( "Error: Factory Restore command failed" );
+    return( false );
+  }
+  // Try set its address...
+  try {
+    s = sendCommand( "addr", myAddr );
+  } catch( std::string error ) {
+    throw( error );
+    return( false );
+  }  
+  return( true );
 }

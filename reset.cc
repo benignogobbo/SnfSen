@@ -1,5 +1,5 @@
 // +-------------------------------------+
-// | Reconnection test                   |
+// | Reset a Vaisala test                |
 // | Benigno Gobbo INFN Trieste          |
 // | 20181005                            |
 // +-------------------------------------+
@@ -118,17 +118,13 @@ int main( void ) {
 
   TestDevices();
 
-  std::cout << std::endl << "\033[4mLet's now reconnect (i.e. disconnect and connect) all devices).\033[0m"
+  std::cout << std::endl << "\033[4mLet's now reset the first Vaisala (will take about 5s).\033[0m"
 	    << std::endl << std::endl;
 
   try {
-    Init* init = Init::initialize();
-    init->reconnectDevices();
-    vaisas  = init->getVaisas();
-    bronkos = init->getBronkos();
-    adam    = init->getAdam();
+    vaisas[0]->factoryReset();
   } catch( std::string error ) {
-    std::cout << "\033[31mError during initialisation: " << error << "\033[0m"  << std::endl;
+    std::cout << "\033[31mError during reset: " << error << "\033[0m"  << std::endl;
     return(1);
   }
 
