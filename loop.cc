@@ -56,7 +56,7 @@ int main( void ) {
     std::cout << "\033[H\033[2K\033[1;34mDate: " << tbuff << "\033[0m" << std::endl;
 
     // The Vaisalas
-    std::cout << "The Vaisala DMT143 Dewpoint Transmitters:" << std::endl;
+    std::cout << "The Vaisala " << vaisas[0]->getProductType() << " Dewpoint Transmitters:" << std::endl;
     float tdf = 0;  
     for( int i=0; i<vaisas.size(); i++ ) {
       if( snf::busevai.test(i) && snf::bgotvai.test(i) ) {

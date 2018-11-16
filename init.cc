@@ -108,157 +108,179 @@ void Init::searchDevices( void ) {
     }
   }
 
-  std::cout << "\033[4mLooking for:" << std::endl
-	    << snf::usb485x4pn << " (s/n " << snf::usb485x4sn << ") module..." << std::endl
-    	    << snf::usb232x4pn << " (s/n " << snf::usb232x4sn << ") module..." << std::endl
-	    << snf::usb485cbpn << " (s/n " << snf::usb485cbsn << ") module...\033[0m" << std::endl;
+  if( snf::busevai.count() == 0 ) std::cout << "\033[33m Warning: no Vaisala devices set to be read.\033[0m" << std::endl;
+  if( snf::busebro.count() == 0 ) std::cout << "\033[33m Warning: no Bronkhorst devices set to be read.\033[0m" << std::endl;
+  if( snf::busegem.count() == 0 ) std::cout << "\033[33m Warning: no General Electric devices set to be read.\033[0m" << std::endl;
+
+  std::cout << "\033[4mLooking for:" << std::endl;
+  if( snf::busevai.count() > 0 ) std::cout << snf::usb485x4pn << " (s/n " << snf::usb485x4sn << ") module..." << std::endl;
+  if( snf::busebro.count() > 0 ) std::cout << snf::usb232x4pn << " (s/n " << snf::usb232x4sn << ") module..." << std::endl;
+  if( snf::busevai.count() > 0 ) std::cout << snf::usb485cbpn << " (s/n " << snf::usb485cbsn << ") module...\033[0m" << std::endl;
+  
   char buff[256];
 
   std::vector<std::string> vFoundDev, bFoundDev, aFoundDev;
+  FILE* f;
   for( unsigned int i=0; i<devices.size(); i++ ) {
     bool vFound = false, bFound = false, aFound = false;
-    std::string vcomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb485x4pn + "/ && /" + snf::usb485x4sn + "/'";
-    FILE* f = popen( vcomm.c_str(), "r" );
-    if( f ) {
-      while( !feof( f ) ) {
-        if( fgets( buff, 256, f ) != NULL && !vFound ) {
-	  vFound = true;
-          vFoundDev.push_back( devices[i] );
-        }
+    if( snf::busevai.count() > 0 ) {
+      std::string vcomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb485x4pn + "/ && /" + snf::usb485x4sn + "/'";
+      f = popen( vcomm.c_str(), "r" );
+      if( f ) {
+	while( !feof( f ) ) {
+	  if( fgets( buff, 256, f ) != NULL && !vFound ) {
+	    vFound = true;
+	    vFoundDev.push_back( devices[i] );
+	  }
+	}
+	pclose( f );
       }
-      pclose( f );
     }
-    std::string bcomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb232x4pn + "/ && /" + snf::usb232x4sn + "/'";
-    f = popen( bcomm.c_str(), "r" );
-    if( f ) {
-      while( !feof( f ) ) {
-        if( fgets( buff, 256, f ) != NULL && !bFound ) {
-	  bFound = true;
-          bFoundDev.push_back( devices[i] );
-        }
+
+    if( snf::busebro.count() > 0 ) {
+      std::string bcomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb232x4pn + "/ && /" + snf::usb232x4sn + "/'";
+      f = popen( bcomm.c_str(), "r" );
+      if( f ) {
+	while( !feof( f ) ) {
+	  if( fgets( buff, 256, f ) != NULL && !bFound ) {
+	    bFound = true;
+	    bFoundDev.push_back( devices[i] );
+	  }
+	}
+	pclose( f );
       }
-      pclose( f );
     }
-    std::string acomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb485cbpn + "/ && /" + snf::usb485cbsn + "/'";
-    f = popen( acomm.c_str(), "r" );
-    if( f ) {
-      while( !feof( f ) ) {
-        if( fgets( buff, 256, f ) != NULL && !aFound ) {
-	  aFound = true;
-          aFoundDev.push_back( devices[i] );
-        }
+
+    if( snf::busegem.count() > 0 ) {
+      std::string acomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb485cbpn + "/ && /" + snf::usb485cbsn + "/'";
+      f = popen( acomm.c_str(), "r" );
+      if( f ) {
+	while( !feof( f ) ) {
+	  if( fgets( buff, 256, f ) != NULL && !aFound ) {
+	    aFound = true;
+	  aFoundDev.push_back( devices[i] );
+	  }
+	}
+	pclose( f );
       }
-      pclose( f );
     }
   }
   
-  if( vFoundDev.size() != 4 ) {
+  if( snf::busevai.count() > 0 && vFoundDev.size() != 4 ) {
     std::cout << "\033[31m Found too few or many 'USB-COM485 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
     exit(1);
   }
-  if( bFoundDev.size() != 4 ) {
+  
+  if( snf::busebro.count() > 0 && bFoundDev.size() != 4 ) {
     std::cout << "\033[31m Found too few or many 'USB-COM232 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
     exit(1);
   }
-  if( aFoundDev.size() != 1 ) {
+  
+  if( snf::busegem.count() > 0 && aFoundDev.size() != 1 ) {
     std::cout << "\033[31m Found too few or many 'USB-RS485 Cable' devices. It must be exactly ONE. Exit...\033[0m" << std::endl;
     exit(1);
   }
 
-  for( int i=0; i<4; i++ ) {
-    bool alive = false;
-    Vaisa* aVaisala = new Vaisa( vFoundDev[i] );
-    try {
-      alive = aVaisala->serialConnect();      
-    } catch( std::string error ) {
-      std::cout << "\033[31mError connecting to device " << vFoundDev[i] << ": "
-		<< error << "\033[0m"  << std::endl;
-      aVaisala->serialDisconnect();
-      exit(1);
-    }
-    if( alive ) {
-      std::string sn = aVaisala->getSerialNumber();
-      std::unordered_map<std::string,int>::const_iterator gotIt = snf::vai.find( sn ); 
-      if( gotIt != snf::vai.end() ) {
-	int j = gotIt->second;
-	if( snf::busevai.test( j ) ) {
-	  _vaisas[ j ] = aVaisala;
-	  snf::bgotvai.set( j, 1 );
+  if( snf::busevai.count() > 0 ) {
+    for( int i=0; i<4; i++ ) {
+      bool alive = false;
+      Vaisa* aVaisala = new Vaisa( vFoundDev[i] );
+      try {
+	alive = aVaisala->serialConnect();      
+      } catch( std::string error ) {
+	std::cout << "\033[31mError connecting to device " << vFoundDev[i] << ": "
+		  << error << "\033[0m"  << std::endl;
+	aVaisala->serialDisconnect();
+	exit(1);
+      }
+      if( alive ) {
+	std::string sn = aVaisala->getSerialNumber();
+	std::unordered_map<std::string,int>::const_iterator gotIt = snf::vai.find( sn ); 
+	if( gotIt != snf::vai.end() ) {
+	  int j = gotIt->second;
+	  if( snf::busevai.test( j ) ) {
+	    _vaisas[ j ] = aVaisala;
+	    snf::bgotvai.set( j, 1 );
+	  }
+	}
+	else {
+	  throw( "Vaisala with s/n "+sn+" not in list" );
+	  return;
 	}
       }
-      else {
-	throw( "Vaisala with s/n "+sn+" not in list" );
-	return;
+    }
+    for( std::unordered_map<std::string, int>::const_iterator it=snf::vai.begin(); it!=snf::vai.end(); ++it ) {
+      int j = it->second;
+      if( snf::bgotvai[j] ) {
+	std::cout << "\033[0mVaisala " << _vaisas[j]->getProductType() << ", id: " << j << ", addr.: " << _vaisas[j]->getAddr()
+		  << ", s/n: " << _vaisas[j]->getSerialNumber() << ", selected: "
+		  << snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
       }
-    }
-  }
-  for( std::unordered_map<std::string, int>::const_iterator it=snf::vai.begin(); it!=snf::vai.end(); ++it ) {
-    int j = it->second;
-    if( snf::bgotvai[j] ) {
-      std::cout << "\033[0mVaisala DM143, id: " << j << ", addr.: " << _vaisas[j]->getAddr()
-		<< ", s/n: " << _vaisas[j]->getSerialNumber() << ", selected: "
-		<< snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
-    }
-    else {
-      std::cout << "\033[0mVaisala DM143, id: " << j << ", addr.: -" 
-		<< ", s/n: --------" << ", selected: "
-		<< snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
+      else {
+	std::cout << "\033[0mVaisala DMT1xx, id: " << j << ", addr.: -" 
+		  << ", s/n: --------" << ", selected: "
+		  << snf::yesno[snf::busevai.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
+      }
     }
   }
 
-  for( int i=0; i<4; i++ ) {
-    bool alive = false;
-    Bronko* aBronkhorst = new Bronko( bFoundDev[i] );
-    try {
-      alive = aBronkhorst->serialConnect();      
-    } catch( std::string error ) {
-      std::cout << "\033[31mError connecting to device " << bFoundDev[i] << ": "
-		<< error << "\033[0m"  << std::endl;
-      aBronkhorst->serialDisconnect();
-      exit(1);
-    }
-    if( alive ) {
-      std::string sn = aBronkhorst->getSerialNumber();
-      std::unordered_map<std::string,int>::const_iterator gotIt = snf::bro.find( sn ); 
-      if( gotIt != snf::bro.end() ) {
-	int j = gotIt->second;
-	if( snf::busebro.test( j ) ) {
-	  _bronkos[ j ] = aBronkhorst;
-	  snf::bgotbro.set( j, 1 );		  
+  if( snf::busebro.count() > 0 ) {
+    for( int i=0; i<4; i++ ) {
+      bool alive = false;
+      Bronko* aBronkhorst = new Bronko( bFoundDev[i] );
+      try {
+	alive = aBronkhorst->serialConnect();      
+      } catch( std::string error ) {
+	std::cout << "\033[31mError connecting to device " << bFoundDev[i] << ": "
+		  << error << "\033[0m"  << std::endl;
+	aBronkhorst->serialDisconnect();
+	exit(1);
+      }
+      if( alive ) {
+	std::string sn = aBronkhorst->getSerialNumber();
+	std::unordered_map<std::string,int>::const_iterator gotIt = snf::bro.find( sn ); 
+	if( gotIt != snf::bro.end() ) {
+	  int j = gotIt->second;
+	  if( snf::busebro.test( j ) ) {
+	    _bronkos[ j ] = aBronkhorst;
+	    snf::bgotbro.set( j, 1 );		  
+	  }
+	}
+	else {
+	  throw( "Bronkhorst with s/n "+sn+" not in list" );
+	  return;
 	}
       }
-      else {
-	throw( "Bronkhorst with s/n "+sn+" not in list" );
-	return;
+    }
+    for( std::unordered_map<std::string, int>::const_iterator it=snf::bro.begin(); it!=snf::bro.end(); ++it ) {
+      int j = it->second;
+      if( snf::bgotbro[j] ) {
+	std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
+		  << ", s/n: " << _bronkos[j]->getSerialNumber() << ", selected: "
+		  << snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
       }
-    }
-  }
-  for( std::unordered_map<std::string, int>::const_iterator it=snf::bro.begin(); it!=snf::bro.end(); ++it ) {
-    int j = it->second;
-    if( snf::bgotbro[j] ) {
-      std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
-		<< ", s/n: " << _bronkos[j]->getSerialNumber() << ", selected: "
-		<< snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[1] << "." << std::endl;
-    }
-    else {
-      std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
-		<< ", s/n: ----------" << ", selected: "
-		<< snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
+      else {
+	std::cout << "\033[0mBronkHorst F-101E-AGD-33-V, id: " << j
+		  << ", s/n: ----------" << ", selected: "
+		  << snf::yesno[snf::busebro.test(j)] << ", connected: " << snf::yesno[0] << "." << std::endl;
+      }
     }
   }
 
-  bool alive = false;
-  Adam* anAdam = new Adam( aFoundDev[0] );
-  try {
-    alive = anAdam->serialConnect();      
-  } catch( std::string error ) {
-    std::cout << "\033[31mError connecting to device " << aFoundDev[0] << ": "
-	      << error << "\033[0m"  << std::endl;
-    anAdam->serialDisconnect();
-    exit(1);
+  if( snf::busegem.count() > 0 ) {
+    bool alive = false;
+    Adam* anAdam = new Adam( aFoundDev[0] );
+    try {
+      alive = anAdam->serialConnect();      
+    } catch( std::string error ) {
+      std::cout << "\033[31mError connecting to device " << aFoundDev[0] << ": "
+		<< error << "\033[0m"  << std::endl;
+      anAdam->serialDisconnect();
+      exit(1);
+    }
+    _adam = anAdam;
   }
-  _adam = anAdam;
- 
+  
   return;
   
 }

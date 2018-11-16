@@ -1,5 +1,5 @@
 // +-------------------------------------+
-// | Vaisala DMT143 Dewpoint Transmitter |
+// | Vaisala DMT1xx Dewpoint Transmitter |
 // | serial wrapper                      |
 // | Benigno Gobbo INFN Trieste          |
 // +-------------------------------------+
@@ -23,6 +23,14 @@ bool Vaisa::_isFloat( std::string s ) {
     std::istringstream ss( s );
     float f;
     ss >> std::noskipws >> f;
+    return ss.eof() && !ss.fail(); 
+}
+
+// <><><><><><> This to check if a string is an integer number...
+bool Vaisa::_isInt( std::string s ) {
+    std::istringstream ss( s );
+    int i;
+    ss >> std::noskipws >> i;
     return ss.eof() && !ss.fail(); 
 }
 
@@ -103,8 +111,10 @@ int Vaisa::_getMyAddr( void ) {
     _serialWrite( command );
     _scaleReadTimeout( 3 );
     std::string answer = _serialRead();
-    answer = answer.substr( command.size()+26,1 );
-    addr = std::stoi( answer );
+    answer = answer.substr( answer.find("Address")+24,1 );
+    if( _isInt( answer )) {
+      addr = std::stoi( answer );
+    }
     usleep( 500000 );
     command = "\015"; 
     _serialWrite( command );
@@ -131,6 +141,23 @@ std::string Vaisa::_getMySN( void ) {
     _scaleReadTimeout( 3 );
     answer = _serialRead();
     answer = answer.substr( command.size()+17,8 );
+  } catch( std::string error ) {
+    throw( error );
+    return( std::string("") );
+  }
+  return answer;
+}
+
+// <><><><><><> Get device product type
+std::string Vaisa::_getMyPT( void ) {
+
+  std::string answer = "";
+  try {
+    std::string command = "vers\015"; // addr<cr>
+    _serialWrite( command );
+    _scaleReadTimeout( 3 );
+    answer = _serialRead();
+    answer = answer.substr( command.size(),6 );
   } catch( std::string error ) {
     throw( error );
     return( std::string("") );
@@ -169,7 +196,7 @@ std::string Vaisa::_getValue( std::string value, std::string precision ) {
     if( status.substr(0,2) != "OK" ) {
       throw( std::string( "Error during 'form' command execution." ) );
       return(std::string(""));
-    } 
+    }
   } catch( std::string error ) {
     throw( error );
     return(std::string(""));
@@ -181,7 +208,7 @@ std::string Vaisa::_getValue( std::string value, std::string precision ) {
     return(data);
   }
   else {
-    throw( std::string( "Error, what reas is not a number." ) );
+    throw( std::string( "Error, what read is not a number." ) );
     return(std::string(""));
   } 
 
@@ -218,6 +245,7 @@ bool Vaisa::serialConnect( void ) {
 
   _myAddr = _getMyAddr();
   _mySN   = _getMySN();
+  _myPT = _getMyPT();
   
   return true;
 

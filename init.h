@@ -1,15 +1,16 @@
 #ifndef INIT_ALL_H
 #define INIT_ALL_H
 
-// +------------------------------------------+
-// | Initialization                           |
-// |                                          |
-// | Benigno Gobbo INFN Trieste               |
-// | 20170619 V1.0                            |
-// | 20170727 V1.1 Use JSON                   |
-// | 20170915 V1.1.1 Fixes                    |
-// | 20180418 V2.0 Loop on devices moved here |
-// +------------------------------------------+
+// +--------------------------------------------+
+// | Initialization                             |
+// |                                            |
+// | Benigno Gobbo INFN Trieste                 |
+// | 20170619 V1.0                              |
+// | 20170727 V1.1 Use JSON                     |
+// | 20170915 V1.1.1 Fixes                      |
+// | 20180418 V2.0 Loop on devices moved here   |
+// | 20181116 V2.1 No dev scan if not selected  |
+// +--------------------------------------------+
 
 #include <vector>
 #include "devdata.h"
