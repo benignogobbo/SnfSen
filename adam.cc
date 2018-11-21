@@ -127,7 +127,7 @@ bool Adam::serialConnect( void ) {
     }
   }  
   if( !found ) {
-    throw( "No ADAM-4019+ devices found..." );
+    throw( std::string( "No ADAM-4019+ devices found..." ) );
     return false;
   }
 
@@ -197,19 +197,19 @@ double Adam::getMeasurement ( int channel ) {
   std::string res = _serialRead();
   if( res.size() > 0 ) {
     if( res.substr(0,1) == "?" ) {
-      throw( "Invalid request sent to "+_myAddr );
+      throw( std::string( "Invalid request sent to "+_myAddr ) );
       return 0;
     }
     else if( res.substr(0,1) == ">" ) {
       return( std::stod( res.substr(1) ) );
     }
     else {
-      throw( "Meaningless answer from "+_myAddr );
+      throw( std::string( "Meaningless answer from "+_myAddr ) );
       return 0;
     }
   }
   else {
-    throw( "Empty answer from "+_myAddr );
+    throw( std::string( "Empty answer from "+_myAddr ) );
     return 0;
   }  
   return 0;

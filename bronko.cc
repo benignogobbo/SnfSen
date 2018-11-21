@@ -229,7 +229,7 @@ int16_t Bronko::getMeasureInt16( void ) {
     _serialWrite( command );
     usleep( 500000 ); // whait a while to let the device think a little...
     std::string answer = _serialRead();
-    if( answer.substr( 0, 11 ) != ":0680020121" ) throw( "Device answer syntax not correct: " + answer );
+    if( answer.substr( 0, 11 ) != ":0680020121" ) throw( std::string( "Device answer syntax not correct: " + answer ) );
     int to = answer.rfind( "\r" );
     answer = answer.substr( to-4, 4 );
     return( _ascii2int16( answer ) );
@@ -246,7 +246,7 @@ float Bronko::getMeasureFloat( void ) {
     _serialWrite( command );
     usleep( 500000 ); // whait a while to let the device think a little...
     std::string answer = _serialRead();
-    if( answer.substr( 0, 11 ) != ":0880022140" ) throw( "Device answer syntax not correct: " + answer );
+    if( answer.substr( 0, 11 ) != ":0880022140" ) throw( std::string( "Device answer syntax not correct: " + answer ) );
     int to = answer.rfind( "\r" );
     answer = answer.substr( to-8, 8 );
     return( _ascii2float( answer ) );
@@ -263,7 +263,7 @@ float Bronko::getTemperature( void ) {
     _serialWrite( command );
     usleep( 500000 ); // whait a while to let the device think a little...
     std::string answer = _serialRead();
-    if( answer.substr( 0, 11 ) != ":0880022147" ) throw( "Device answer syntax not correct: " + answer );
+    if( answer.substr( 0, 11 ) != ":0880022147" ) throw( std::string( "Device answer syntax not correct: " + answer ) );
     int to = answer.rfind( "\r" );
     answer = answer.substr( to-8, 8 );
     return( _ascii2float( answer ) );

@@ -52,12 +52,17 @@ Init* Init::initialize( void ) {
 // <+><+><+><+><+><+> Constructor
 Init::Init( void ) {
 
-  // First of all set thinks from JSON file...
-  readJSON();
-
-  std::cout << "\033[7mSearching for devices connected to USB ports. This may take a while...\033[0m"  << std::endl;
-  searchDevices();  
-
+  try {
+    // First of all set thinks from JSON file...
+    readJSON();
+    
+    std::cout << "\033[7mSearching for devices connected to USB ports. This may take a while...\033[0m"  << std::endl;
+    searchDevices();
+  }
+  catch( std::string error ) {
+    throw( std::string( "\033[31mError during initialisation: " + error + "\033[0m" ) );
+    return;
+  }
 }
 
 // <+><+><+><+><+><+> readJSON
@@ -66,9 +71,8 @@ void Init::readJSON( void ) {
   std::ifstream f;
   f.open( snf::jsonFile );
   if( f.fail() ) {
-    std::cout << "\033[31mOh shit!: cannot find " << snf::jsonFile << " file.\033[0m"
-	      << std::endl;
-    exit(1);
+    throw( std::string( "\033[31mOh shit!: cannot find " + snf::jsonFile + " file.\033[0m" ) );
+    return;
   }
 
   json j_devdata;
@@ -112,17 +116,19 @@ void Init::searchDevices( void ) {
   if( snf::busebro.count() == 0 ) std::cout << "\033[33m Warning: no Bronkhorst devices set to be read.\033[0m" << std::endl;
   if( snf::busegem.count() == 0 ) std::cout << "\033[33m Warning: no General Electric devices set to be read.\033[0m" << std::endl;
 
-  std::cout << "\033[4mLooking for:" << std::endl;
+  std::cout << "\033[4mLooking for:\033[0m" << std::endl;
   if( snf::busevai.count() > 0 ) std::cout << snf::usb485x4pn << " (s/n " << snf::usb485x4sn << ") module..." << std::endl;
   if( snf::busebro.count() > 0 ) std::cout << snf::usb232x4pn << " (s/n " << snf::usb232x4sn << ") module..." << std::endl;
-  if( snf::busevai.count() > 0 ) std::cout << snf::usb485cbpn << " (s/n " << snf::usb485cbsn << ") module...\033[0m" << std::endl;
+  if( snf::busegem.count() > 0 ) std::cout << snf::usb485cbpn << " (s/n " << snf::usb485cbsn << ") module..." << std::endl;
   
   char buff[256];
 
   std::vector<std::string> vFoundDev, bFoundDev, aFoundDev;
   FILE* f;
   for( unsigned int i=0; i<devices.size(); i++ ) {
+
     bool vFound = false, bFound = false, aFound = false;
+    
     if( snf::busevai.count() > 0 ) {
       std::string vcomm = "udevadm info -a -n " + devices[i] + " | xargs | awk '/" + snf::usb485x4pn + "/ && /" + snf::usb485x4sn + "/'";
       f = popen( vcomm.c_str(), "r" );
@@ -165,20 +171,21 @@ void Init::searchDevices( void ) {
       }
     }
   }
-  
+
   if( snf::busevai.count() > 0 && vFoundDev.size() != 4 ) {
-    std::cout << "\033[31m Found too few or many 'USB-COM485 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
-    exit(1);
+    throw( std::string( "\033[31m Found too few or many 'USB-COM485 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" ) );
+    return;
   }
+
   
   if( snf::busebro.count() > 0 && bFoundDev.size() != 4 ) {
-    std::cout << "\033[31m Found too few or many 'USB-COM232 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" << std::endl;
-    exit(1);
+    throw( std::string( "\033[31m Found too few or many 'USB-COM232 Plus4' devices. They must be exactly FOUR. Exit...\033[0m" ) );
+    return;
   }
   
   if( snf::busegem.count() > 0 && aFoundDev.size() != 1 ) {
-    std::cout << "\033[31m Found too few or many 'USB-RS485 Cable' devices. It must be exactly ONE. Exit...\033[0m" << std::endl;
-    exit(1);
+    throw( std::string( "\033[31m Found too few or many 'USB-RS485 Cable' devices. It must be exactly ONE. Exit...\033[0m" ) );
+    return;
   }
 
   if( snf::busevai.count() > 0 ) {
@@ -188,10 +195,8 @@ void Init::searchDevices( void ) {
       try {
 	alive = aVaisala->serialConnect();      
       } catch( std::string error ) {
-	std::cout << "\033[31mError connecting to device " << vFoundDev[i] << ": "
-		  << error << "\033[0m"  << std::endl;
-	aVaisala->serialDisconnect();
-	exit(1);
+	throw( std::string( "\033[31mError connecting to device " + vFoundDev[i] + ": " + error + "\033[0m" ) );
+	return;
       }
       if( alive ) {
 	std::string sn = aVaisala->getSerialNumber();
@@ -204,7 +209,7 @@ void Init::searchDevices( void ) {
 	  }
 	}
 	else {
-	  throw( "Vaisala with s/n "+sn+" not in list" );
+	  throw( std::string( "Vaisala with s/n "+sn+" not in list" ) );
 	  return;
 	}
       }
@@ -231,10 +236,8 @@ void Init::searchDevices( void ) {
       try {
 	alive = aBronkhorst->serialConnect();      
       } catch( std::string error ) {
-	std::cout << "\033[31mError connecting to device " << bFoundDev[i] << ": "
-		  << error << "\033[0m"  << std::endl;
-	aBronkhorst->serialDisconnect();
-	exit(1);
+	throw( std::string( "\033[31mError connecting to device " + bFoundDev[i] + ": " + error + "\033[0m" ) );
+	return;
       }
       if( alive ) {
 	std::string sn = aBronkhorst->getSerialNumber();
@@ -247,7 +250,7 @@ void Init::searchDevices( void ) {
 	  }
 	}
 	else {
-	  throw( "Bronkhorst with s/n "+sn+" not in list" );
+	  throw( std::string( "Bronkhorst with s/n "+sn+" not in list" ) );
 	  return;
 	}
       }
@@ -273,15 +276,11 @@ void Init::searchDevices( void ) {
     try {
       alive = anAdam->serialConnect();      
     } catch( std::string error ) {
-      std::cout << "\033[31mError connecting to device " << aFoundDev[0] << ": "
-		<< error << "\033[0m"  << std::endl;
-      anAdam->serialDisconnect();
-      exit(1);
+      throw( std::string( "\033[31mError connecting to device " + aFoundDev[0] + ": " + error + "\033[0m" ) );
+      return;
     }
     _adam = anAdam;
   }
-  
-  return;
   
 }
 
@@ -295,9 +294,8 @@ void Init::cleanDevices( void ) {
       _vaisas[i] = NULL;
     }
   }  catch( std::string error ) {
-    std::cout << "\033[31mError disconnecting and deleting a Vaisa object: "
-	      << error << "\033[0m"  << std::endl;
-    exit(1);
+    throw( std::string( "\033[31mError disconnecting and deleting a Vaisa object: " + error + "\033[0m" ) );
+    return;
   }
 
   try {
@@ -307,9 +305,8 @@ void Init::cleanDevices( void ) {
       _bronkos[i] = NULL;
     }
   }  catch( std::string error ) {
-    std::cout << "\033[31mError disconnecting and deleting a Bronko object: "
-	      << error << "\033[0m"  << std::endl;
-    exit(1);
+    throw( std::string( "\033[31mError disconnecting and deleting a Bronko object: " + error + "\033[0m" ) );
+    return;
   }
 
   try {
@@ -317,9 +314,8 @@ void Init::cleanDevices( void ) {
     delete( _adam );
     _adam = NULL;
   }  catch( std::string error ) {
-    std::cout << "\033[31mError disconnecting and deleting the Adam object: "
-	      << error << "\033[0m"  << std::endl;
-    exit(1);
+    throw( std::string( "\033[31mError disconnecting and deleting the Adam object: " + error + "\033[0m" ) );
+    return;
   }
   
 }
@@ -329,10 +325,8 @@ void Init::reconnectDevices( void ) {
     cleanDevices();
     searchDevices();
   }  catch( std::string error ) {
-    std::cout << "\033[31mError disconnecting and reconnecting the devices: "
-	      << error << "\033[0m"  << std::endl;
-    exit(1);
+    throw( std::string( "\033[31mError disconnecting and reconnecting the devices: " + error + "\033[0m" ) );
+    return;
   }
-
 
 }

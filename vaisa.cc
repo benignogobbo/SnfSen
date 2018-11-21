@@ -376,7 +376,7 @@ bool Vaisa::factoryReset( void ) {
     return( false );
   }
   if( s.substr( 0,6 ) != "DMT143" ) {
-    throw( "Error: Reset command failed" );
+    throw( std::string( "Error: Reset command failed" ) );
     return( false );
   }
   // Try a factory restore...
@@ -387,7 +387,7 @@ bool Vaisa::factoryReset( void ) {
     return( false );
   }
   if( s.substr( 0, 7 ) != "Factory" ) {
-    throw( "Error: Factory Restore command failed" );
+    throw( std::string( "Error: Factory Restore command failed" ) );
     return( false );
   }
   // Try set its address...
