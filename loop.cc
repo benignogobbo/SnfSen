@@ -57,11 +57,21 @@ int main( void ) {
 
     // The Vaisalas
     std::cout << "The Vaisala " << vaisas[0]->getProductType() << " Dewpoint Transmitters:" << std::endl;
-    float tdf = 0;  
+    float tdf = 0; int vStat = 0;  
     for( int i=0; i<vaisas.size(); i++ ) {
       if( snf::busevai.test(i) && snf::bgotvai.test(i) ) {
 	try {
-	  tdf = vaisas[i]->getTdf( 3 );
+	  tdf = 0;
+	  if( vaisas[i]->isaDMT152() ) {
+	    vStat = vaisas[i]->getStatus();
+	    if( vStat%10 == 0 ) tdf = vaisas[i]->getTdf( 3 );
+	  }
+	  else if( vaisas[i]->isaDMT143() ) {
+	    vStat = vaisas[i]->getStatus();
+	  }
+	  else {
+	    tdf = 0;
+	  }
 	} catch( std::string error ) {
 	  std::cout << "\033[31mError reading data string device " << vaisas[i]->getDevice() << ": "
 		    << error << "\033[0m"  << std::endl;

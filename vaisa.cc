@@ -294,7 +294,7 @@ float Vaisa::getTdf( int ndec ) {
     val = std::stof( _getValue( "tdf", prec ) );
   } catch( std::string error ) {
     throw( error );
-    return(0.0);
+    return(0);
   }
   return(val);
 }
@@ -307,7 +307,7 @@ float Vaisa::getTdfAtm( int ndec ) {
     val = std::stof( _getValue( "tdfa", prec ) );
   } catch( std::string error ) {
     throw( error );
-    return(0.0);
+    return(0);
   }
   return(val);
 }
@@ -319,7 +319,7 @@ int   Vaisa::getH2O( void ) {
     val = std::stoi( _getValue( "H2O", "" ) );
   } catch( std::string error ) {
     throw( error );
-    return(0.0);
+    return(0);
   }
   return(val);
 }
@@ -398,4 +398,34 @@ bool Vaisa::factoryReset( void ) {
     return( false );
   }  
   return( true );
+}
+
+// <><><><><><> reset + frestore + addr <n>
+int Vaisa::getStatus( void ) {
+  int val = 0;
+  if( _myPT == "DMT152" ) {
+    try {
+      val = std::stoi( _getValue( "STAT", "" ) );
+    } catch( std::string error ) {
+      throw( error );
+      return(0);
+    }
+    return(val);
+  }
+  else {
+    throw( std::string( "ERROR: this function works only on DMT152 devices." ) );
+    return( 0 );
+  }
+}
+// <><><><><><> reset + frestore + addr <n>
+std::string Vaisa::getErrors( void ) {
+  std::string s = "";
+  try {
+    s = sendCommand( "ERRS" );
+    s = s.substr( 0, s.length()-2 );
+  } catch( std::string error ) {
+    throw( error );
+    return( std::string("") );
+  }
+  return(s);
 }

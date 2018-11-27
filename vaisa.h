@@ -9,7 +9,8 @@
 // | 20180419 V2.0 Loop on devices moved |
 // |               into init             |
 // | 20181018 V2.1 Reset function        |
-// | 20181116 V2.2 Added DMT152+fixes    | 
+// | 20181116 V2.2 Added DMT152+fixes    |
+// | 20181127 V2.3 Soem more fuctions    |
 // +-------------------------------------+
 
 #include <string>
@@ -33,9 +34,13 @@ class Vaisa {
   inline std::string getSerialNumber( void ) { return _mySN; }
   inline std::string getProductType( void ) { return _myPT; }
   inline int         getAddr( void ) { return _myAddr; }
+  inline bool        isaDMT143( void ) { if( _myPT == "DMT143" ) return true; else return false; }
+  inline bool        isaDMT152( void ) { if( _myPT == "DMT152" ) return true; else return false; }
   float getTdf( int ndec = 4 );
   float getTdfAtm( int ndec = 4 );
   int   getH2O( void );
+  int   getStatus( void );
+  std::string getErrors( void );
   bool  factoryReset( void );
   
  private:
