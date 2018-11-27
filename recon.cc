@@ -46,7 +46,7 @@ void TestDevices( void ) {
 	  if( vStat%10 == 0 ) tdf = vaisas[i]->getTdf( 3 );
 	}
 	else if( vaisas[i]->isaDMT143() ) {
-	  vStat = vaisas[i]->getStatus();
+	  tdf = vaisas[i]->getTdf( 3 );
 	}
 	else {
 	  tdf = 0;
