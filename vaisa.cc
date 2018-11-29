@@ -375,7 +375,12 @@ bool Vaisa::factoryReset( void ) {
     throw( error );
     return( false );
   }
-  if( s.substr( 0,6 ) != "DMT143" ) {
+  if(  _myPT == "DMT143" && s.substr( 0,6 ) != "DMT143" ) {
+    throw( std::string( "Error: Reset command failed" ) );
+    return( false );
+  }
+
+  if(  _myPT == "DMT152" && s.substr( 0,6 ) != "DMT152" ) {
     throw( std::string( "Error: Reset command failed" ) );
     return( false );
   }
