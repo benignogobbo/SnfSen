@@ -10,7 +10,8 @@
 // |               into init             |
 // | 20181018 V2.1 Reset function        |
 // | 20181116 V2.2 Added DMT152+fixes    |
-// | 20181127 V2.3 Soem more fuctions    |
+// | 20181127 V2.3 Some more fuctions    |
+// | 20190315 V2.3 Added check&retry     | 
 // +-------------------------------------+
 
 #include <string>
