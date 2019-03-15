@@ -18,6 +18,8 @@
 #include "vaisa.h"
 #include "devdata.h"
 
+#define MAX_ATTEMPTS (500)
+
 // <><><><><><> This to check if a string is a real number...
 bool Vaisa::_isFloat( std::string s ) {
     std::istringstream ss( s );
@@ -157,7 +159,7 @@ std::string Vaisa::_getMyPT( void ) {
     _serialWrite( command );
     _scaleReadTimeout( 3 );
     answer = _serialRead();
-    answer = answer.substr( command.size(),6 );
+    answer = answer.substr( command.size(), 6 );
   } catch( std::string error ) {
     throw( error );
     return( std::string("") );
@@ -171,47 +173,55 @@ std::string Vaisa::_getValue( std::string value, std::string precision ) {
   std::string status = "", data = "";
   try {
     _scaleReadTimeout( 2 );
-    std::string command = "form " + precision + "  " + value + " #000";  // form [string]
-    status = sendCommand( command );
-    if( status.substr(0,2) != "OK" ) {
-      throw( std::string( "Error during 'form' command execution." ) );
-      return(std::string(""));
+    int count = 0;
+    bool ok = false;
+    if( precision != "" ) {
+      while( !ok && count++ < MAX_ATTEMPTS ) { // 20190315 Benigno: pedantic checks due to "connection to Vaisalas problem" 
+	std::string command = "form " + precision + " " + value + " #000";  // form [string]
+	status = sendCommand( command );
+	if( status.length() > 2 ) {
+	  if( status.substr(0,2) == "OK" ) {
+	    command = "form";
+	    status = sendCommand( command );
+	    std::string check;
+	    if( precision == "" ) {
+	      check = value + " \\000 \r\n";
+	    }
+	    else {
+	      check = precision + " " + value + " \\000 \r\n";
+	    }
+	    if( status  == check ) {
+	      ok = true;
+	    }
+	  }
+	}
+      }
     }
     usleep( 100000 ); // wait a short while...
-    command = "send"; // send<cr>
-    bool gotit = false;
-    int count = 0;
-    do { // 20181009 BenG if no data try up to three times... 
+    std::string command = "send"; // send<cr>
+    count = 0;
+    do { // 20190315 Benigno. If no data try more and more times... 
       data = sendCommand( command );
-      if( data.size() > 0 ) gotit = true;
-      count++;
-    } while( gotit == false && count<4 );
-    if( !gotit ) {
-      throw( std::string( "Error during datum readout." ) );
-      return(std::string(""));
-    }     
-    _scaleReadTimeout( 2 );
-    command = "form /";  // form /<cr>
-    status = sendCommand( command );
-    if( status.substr(0,2) != "OK" ) {
-      throw( std::string( "Error during 'form' command execution." ) );
-      return(std::string(""));
-    }
+      if( data.size() > 0 ) {
+	size_t first = data.find_first_not_of(' ');
+	size_t last = data.find_last_not_of(' ');
+	if( first >= 0 && last >= 0 && first < data.length() && (last-first+1) <= data.length() ) { 
+	  data = data.substr(first, (last-first+1));
+	  if( _isFloat( data ) ) {
+	    return(data);
+	  }
+	  else {
+	    throw( std::string( "Error, what read is not a number." ) );
+	    return(std::string(""));
+	  } 
+	}
+      }
+      usleep( 50000 );
+    } while( count++ < MAX_ATTEMPTS );
   } catch( std::string error ) {
     throw( error );
     return(std::string(""));
   }
-  size_t first = data.find_first_not_of(' ');
-  size_t last = data.find_last_not_of(' ');
-  data = data.substr(first, (last-first+1));
-  if( _isFloat( data ) ) {
-    return(data);
-  }
-  else {
-    throw( std::string( "Error, what read is not a number." ) );
-    return(std::string(""));
-  } 
-
 }
 
 // <><><><><><> Connect to Serial
@@ -291,7 +301,7 @@ float Vaisa::getTdf( int ndec ) {
   std::string prec = "3." + std::to_string(ndec);
   float val = 0;
   try {
-    val = std::stof( _getValue( "tdf", prec ) );
+    val = std::stof( _getValue( "Tdf", prec ) );
   } catch( std::string error ) {
     throw( error );
     return(0);
@@ -348,7 +358,12 @@ template <typename T> std::string Vaisa::sendCommand( std::string command, T arg
   else usleep( 100000 );
 
   std::string s = _serialRead();
-  s = s.substr( ss.str().size() );
+  if( s.length() > ss.str().length() ) {
+    s = s.substr( ss.str().size() );
+  }
+  else {
+    s = "";
+  }
 
   return(s);
 }
@@ -410,12 +425,24 @@ int Vaisa::getStatus( void ) {
   int val = 0;
   if( _myPT == "DMT152" ) {
     try {
-      val = std::stoi( _getValue( "STAT", "" ) );
+      int count = 0;
+      while( count++ < MAX_ATTEMPTS ) {
+	std::string status = sendCommand( "STAT" );
+	if( status.length() > 0 ) {
+	  size_t first = status.find_first_not_of(' ');
+	  if( first >= 0 && first+4 < status.length() ) { 
+	    status = status.substr( first, first+4 );
+	    if( _isInt( status ) ) {
+	      val = std::stoi( status );
+	      return( val );
+	    }
+	  }
+	}
+      }
     } catch( std::string error ) {
       throw( error );
       return(0);
     }
-    return(val);
   }
   else {
     throw( std::string( "ERROR: this function works only on DMT152 devices." ) );
