@@ -119,8 +119,9 @@ bool Adam::serialConnect( void ) {
     _serialWrite( command );
     usleep( 50000 );
     std::string devName = _serialRead();
-    if( devName.size() > 7 ) {
-      if( devName.substr(0,1) == "!" && devName.substr(3,5) == "4019P" ) {
+    std::size_t excl = devName.find( "!" );
+    if( excl != std::string::npos ) {
+      if( devName.substr(excl,1) == "!" && devName.substr(excl+3,5) == "4019P" ) {
 	found = true;
 	_myAddr = ss.str();
       }
@@ -195,13 +196,16 @@ double Adam::getMeasurement ( int channel ) {
   _serialWrite( ss.str() );
   usleep( 100000 );
   std::string res = _serialRead();
+
   if( res.size() > 0 ) {
-    if( res.substr(0,1) == "?" ) {
+    std::size_t tag = res.find( "?" );
+    if( tag != std::string::npos ) {
       throw( std::string( "Invalid request sent to "+_myAddr ) );
       return 0;
     }
-    else if( res.substr(0,1) == ">" ) {
-      return( std::stod( res.substr(1) ) );
+    tag = res.find( ">" );
+    if( tag != std::string::npos ) {
+      return( std::stod( res.substr(tag+1) ) );
     }
     else {
       throw( std::string( "Meaningless answer from "+_myAddr ) );
